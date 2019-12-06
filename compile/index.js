@@ -1,62 +1,135 @@
 import { Watcher } from '../observer/index.js'
 
-function node2Fragment (node, vm) {
-    var fragment = document.createDocumentFragment(),
-        child;
+function Compile (node, vm) {
+    if (!this.isElementNode(node)) alert("请传入正确的根节点");
 
-    // 将根节点中的所有节点都劫持并编译到 fragment 中
-    while (node.firstChild) {
-        child = node.firstChild;
-        compile(child, vm);
-        fragment.appendChild(child); // 调用appendChild方法, child会从原来的父节点中移除
-    }
-
-    return fragment;
+    this.vm = vm;
+    this.node = node;
+    this.fragment = this.node2Fragment(node);
+    this.init(); // 开始编译
+    this.node.appendChild(this.fragment); // 将编译结果挂载到根节点
 }
 
-// 将所有节点与vm实例进行关联; 收集依赖
-function compile (node, vm) {
-    if (node.nodeType === 3 && node.nodeValue.trim() === '') return; // 忽略回车等空白文本节点
-
-    // 标签嵌套
-    if (node.childNodes && node.childNodes.length) {
-        for (var i=0, len=node.childNodes.length; i<len; i++) {
-            compile(node.childNodes[i], vm);
+Compile.prototype = {
+    node2Fragment (node) {
+        var fragment = document.createDocumentFragment(),
+            child;
+    
+        // 将根节点中的所有节点都劫持到 fragment 中
+        while (node.firstChild) {
+            child = node.firstChild;
+            fragment.appendChild(child); // 调用appendChild方法, child会从原来的父节点中移除
         }
-    }
+    
+        return fragment;
+    },
 
-    var re = /\{\{(.*)\}\}/;
+    init () {
+        this.compile(this.fragment);
+    },
 
-    if (node.nodeType === 1) { // 元素节点
-        var attr = node.attributes;
+    compile (node) {
+        var childNodes = node.childNodes,
+            _this = this;
 
-        // 解析节点属性
-        for (var i=0; i<attr.length; i++) {
-            if (attr[i].nodeName === 'v-model') {
-                var name = attr[i].nodeValue; // 获取v-model绑定的属性名
-                // node.value = vm[name];
-                
-                node.addEventListener('input', function (e) {
-                    // 给相应的 vm 数据属性赋值, 从而触发该属性的 set 方法
-                    vm[name] = e.target.value;
-                });
-
-                new Watcher(vm, node, name);
-
-                node.removeAttribute('v-model');
+        Array.from(childNodes).forEach(function (node) {
+            if (_this.isElementNode(node)) {
+                _this.compileElement(node);
             }
+            else if (_this.isTextNode(node)) {
+                var reg = /\{\{(.*)\}\}/;
+                if (reg.test(node.textContent)) { // node.nodeValue
+                    var name = RegExp.$1.trim();
+                    _this.compileText(node, name);
+                }
+            }
+            
+            if (node.childNodes && node.childNodes.length) {
+                _this.compile(node);
+            }
+        });
+
+    },
+
+    compileElement (node) {
+        var nodeAttrs = node.attributes,
+            _this = this;
+        
+        Array.from(nodeAttrs).forEach(function (attr) {
+            var attrName = attr.name; // attr.nodeName
+            if (_this.isDirective(attrName)) {
+                // v-model="text", v-on:click="clickHandler"
+                var dirName = attrName.substring(2); // 删除v-
+                var dirExp = attr.value; // attr.nodeValue
+                // 事件指令
+                if (_this.isEventDirective(dirName)) {
+                    compileUtil.eventHandler(node, _this.vm, dirName, dirExp)
+                } else { // 普通指令
+                    compileUtil[dirName] && compileUtil[dirName](node, _this.vm, dirExp);
+                }
+
+                node.removeAttribute(attrName);
+            }
+        })
+    },
+
+    compileText (node, name) {
+        compileUtil.text(node, this.vm, name);
+    },
+
+    isElementNode (node) {
+        return node.nodeType === 1;
+    },
+
+    isTextNode (node) {
+        return node.nodeType === 3;
+    },
+
+    isDirective (attr) {
+        return attr.indexOf('v-') === 0;
+    },
+
+    isEventDirective (dirName) {
+        // v-on:click
+        // on:click
+        return dirName.indexOf('on') === 0;
+    }
+};
+
+Compile.prototype.constructor = Compile;
+
+var compileUtil = {
+    // TODO: v-text="'hello'" 与 v-html="'<h2>hello</h2>"
+    // {{ text }} 与 v-text
+    text (node, vm, name) {
+        new Watcher(vm, node, name, 'text');
+    },
+
+    html (node, vm, name) {
+        new Watcher(vm, node, name, 'html');
+    },
+
+    model (node, vm, name) {
+        node.addEventListener('input', function (e) {
+            vm[name] = e.target.value;
+        });
+        new Watcher(vm, node, name, 'model');
+    },
+    // Watcher 的第四个参数用于指示, 具体对节点的什么属性进行操作
+    // 比如
+    // v-model对应的是 node.value(input)
+    // v-text对应的是 node.innerText 或者 node.textContent
+    // v-html对应的是 node.innerHtml
+
+    eventHandler (node, vm, dirName, dirExp) {
+        // on:click
+        var eventType = dirName.split(':')[1],
+            fn = vm.options.methods && vm.options.methods[dirExp];
+
+        if (eventType && fn) {
+            node.addEventListener(eventType, fn.bind(vm), false);
         }
     }
-    else if (node.nodeType === 3) { // 文本节点
-        node.nodeValue = node.nodeValue.trim();
-        if (re.test(node.nodeValue)) {
-            var name = RegExp.$1; // 获取匹配到的字符串, 即依赖的属性
-            name = name.trim();
-            // node.nodeValue = vm[name]; // 将data中的相应属性的值赋给该节点
+};
 
-	        new Watcher(vm, node, name); // 数据响应式
-        }
-    }
-}
-
-export { node2Fragment }
+export { Compile }

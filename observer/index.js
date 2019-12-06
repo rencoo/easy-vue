@@ -69,10 +69,11 @@ class Dep {
 
 // 订阅者, 订阅vm数据(各个节点都是订阅者)
 class Watcher {
-	constructor (vm, node, name) {
+	constructor (vm, node, name, type) {
 		this.vm = vm;
 		this.node = node;
 		this.name = name;
+		this.type = type;
 		this.update(); // 更新视图
 	}
 	addDep (dep) {
@@ -96,7 +97,15 @@ class Watcher {
 
 			if (this.node.nodeType === 1) { // 元素节点(nodeValue为null)
 				console.log('更新元素节点');
-				this.node.value = this.value; // 更新视图
+
+				if (this.type === 'model') {
+					this.node.value = this.value; // 更新视图
+				} else if (this.type === 'text') {
+					this.node.textContent = this.value;
+				} else if (this.type === 'html') {
+					this.node.innerHTML = this.value;
+				}
+				
 			} 
 			else if (this.node.nodeType === 3) // 文本节点
             {
