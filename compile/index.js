@@ -34,13 +34,31 @@ Compile.prototype = {
 
         Array.from(childNodes).forEach(function (node) {
             if (_this.isElementNode(node)) {
-                _this.compileElement(node);
+                _this.compileElementNode(node);
             }
             else if (_this.isTextNode(node)) {
-                var reg = /\{\{(.*)\}\}/;
-                if (reg.test(node.textContent)) { // node.nodeValue
-                    var name = RegExp.$1.trim();
-                    _this.compileText(node, name);
+                var reg = /\{\{(.*?)\}\}/g; // 惰性匹配
+                // if (reg.test(node.textContent)) { // node.nodeValue // 有多处插值表达式会有问题 {{a}}hello{{a}}{{b}}world
+                //     console.log(RegExp.$1);
+                //     var name = RegExp.$1.trim();
+                //     _this.compileTextNode(node, name);
+                // }
+                var sMatchArr = node.textContent.match(reg);
+                if(sMatchArr && sMatchArr.length) {
+                    var nameArr = [];
+                    sMatchArr.forEach(sMatch => { // {{a}}hello{{a}}{{b}}world => [{{a}}, {{a}}, {{b}}]
+                        if (reg.test(sMatch)) {
+                            reg.lastIndex = 0;
+                            var name = RegExp.$1.trim();
+                            if (nameArr.indexOf(name) === -1) {
+                                nameArr.push(name);
+                            }
+                        }
+                    });
+
+                    nameArr.forEach(name => { // [a, b]; 此节点需要观察a, b两个数据属性
+                        _this.compileTextNode(node, name);
+                    });
                 }
             }
             
@@ -51,7 +69,7 @@ Compile.prototype = {
 
     },
 
-    compileElement (node) {
+    compileElementNode (node) {
         var nodeAttrs = node.attributes,
             _this = this;
         
@@ -73,8 +91,8 @@ Compile.prototype = {
         })
     },
 
-    compileText (node, name) {
-        compileUtil.text(node, this.vm, name);
+    compileTextNode (node, name) {
+        compileUtil.textNode(node, this.vm, name);
     },
 
     isElementNode (node) {
@@ -99,16 +117,25 @@ Compile.prototype = {
 Compile.prototype.constructor = Compile;
 
 var compileUtil = {
+    // textNode
+    // {{}}
+    textNode (node, vm, name) {
+        new Watcher(vm, node, name);
+    },
+
+    // elementNode
     // TODO: v-text="'hello'" 与 v-html="'<h2>hello</h2>"
-    // {{ text }} 与 v-text
+    // v-text
     text (node, vm, name) {
         new Watcher(vm, node, name, 'text');
     },
 
+    // v-html
     html (node, vm, name) {
         new Watcher(vm, node, name, 'html');
     },
 
+    // v-model
     model (node, vm, name) {
         node.addEventListener('input', function (e) {
             vm[name] = e.target.value;

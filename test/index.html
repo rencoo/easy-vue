@@ -11,7 +11,7 @@
 			<div v-html="html"></div>
 		</div>
 	</div>
-	{{ text }}
+	{{ text }} Hello {{ text }} {{ text2 }}
 	<div>
 		<button v-on:click="clickHandler">button</button>
 	</div>
@@ -22,6 +22,7 @@
 		el: '#app',
 		data: {
 			text: 'hello world',
+			text2: 'good job',
 			html: '<h3>hello world</h3>'
 		},
 		methods: {

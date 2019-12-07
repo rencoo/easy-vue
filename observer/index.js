@@ -77,6 +77,8 @@ class Watcher {
 		this.update(); // 更新视图
 	}
 	addDep (dep) {
+		// TODO: watcher中岂不是每get一次都向订阅者列表里边增加一遍
+		// 判断去重
 		dep.addSub(this);
 	}
 	// 触发数据属性的getter, 从而将watcher实例添加到dep中, 与observer建立联系
@@ -88,6 +90,7 @@ class Watcher {
 	}
 	update () {
 		// debugger;
+		var _this = this;
 		var value = this.get(); // 获取到依赖属性的值
 		var oldValue = this.value;
 		if (value !== oldValue) {
@@ -96,7 +99,7 @@ class Watcher {
 			// this.cb.call(this.vm, value, oldValue);
 
 			if (this.node.nodeType === 1) { // 元素节点(nodeValue为null)
-				console.log('更新元素节点');
+				// console.log('更新元素节点');
 
 				if (this.type === 'model') {
 					this.node.value = this.value; // 更新视图
@@ -109,8 +112,16 @@ class Watcher {
 			} 
 			else if (this.node.nodeType === 3) // 文本节点
             {
-				console.log('更新文本节点');
-                this.node.nodeValue = this.value; // 更新视图
+				// console.log('更新文本节点');
+				var reg = /\{\{(.*?)\}\}/g; // 惰性匹配
+				this.node.nodeValue = this.node.nodeValue.replace(reg, function (sMatch, $1) {
+					var name = $1.trim();
+					if (name === _this.name) {
+						return _this.value;
+					} else {
+						return sMatch; // 匹配到了就替换, 未匹配到就保持不变等下一个watcher来匹配
+					}
+				});
             }
 		}
 	}
