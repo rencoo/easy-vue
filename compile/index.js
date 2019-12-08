@@ -120,6 +120,9 @@ var compileUtil = {
     // textNode's Mustache: {{ text }}
     textNode (node, vm, name) {
         var updaterFn = updater['textNodeUpdater'];
+
+        updaterFn && updaterFn(node, name, vm[name]);
+
         new Watcher(vm, name, function (value, oldValue) {
             updaterFn && updaterFn(node, name, value, oldValue);
         });
@@ -129,29 +132,30 @@ var compileUtil = {
     // TODO: v-text="'hello'" 与 v-html="'<h2>hello</h2>"
     // v-text
     text (node, vm, name) {
-        var dir = 'text';
-        var updaterFn = updater[dir + 'Updater'];
-        new Watcher(vm, name, function (value, oldValue) {
-            updaterFn && updaterFn(node, value, oldValue);
-        });
+        this.bind(node, vm, name, 'text');
     },
 
     // v-html
     html (node, vm, name) {
-        var dir = 'html';
-        var updaterFn = updater[dir + 'Updater'];
-        new Watcher(vm, name, function (value, oldValue) {
-            updaterFn && updaterFn(node, value, oldValue);
-        });
+        this.bind(node, vm, name, 'html');
     },
 
     // v-model
     model (node, vm, name) {
+        this.bind(node, vm, name, 'model');
+
         node.addEventListener('input', function (e) {
             vm[name] = e.target.value;
         });
-        var dir = 'model';
+    },
+
+    bind (node, vm, name, dir) {
         var updaterFn = updater[dir + 'Updater'];
+
+        // 初次编译
+        updaterFn && updaterFn(node, vm[name]);
+
+        // 侦测数据变化, 并更新节点
         new Watcher(vm, name, function (value, oldValue) {
             updaterFn && updaterFn(node, value, oldValue);
         });
