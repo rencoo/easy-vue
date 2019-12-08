@@ -44,15 +44,18 @@ class Observer {
 class Dep {
 	constructor () {
 		this.subs = [];
+		this.id = Dep.uid++;
 	}
 
 	static target = null;
+	static uid = 0;
 	
 	// depend () {
 	// 	Dep.target.addDep(this);
 	// }
 	addSub (sub) {
 		this.subs.push(sub);
+		// console.log(this.id, this.subs);
 	}
 	deSub (sub) {
 		var index = this.subs.indexOf(sub);
@@ -73,12 +76,17 @@ class Watcher {
 		this.vm = vm;
 		this.name = name;
 		this.cb = cb;
+		this.depIds = {};
 		this.update(); // 更新视图
 	}
 	addDep (dep) {
-		// TODO: watcher中岂不是每get一次都向订阅者列表里边增加一遍
-		// 判断去重
-		dep.addSub(this);
+		// 每次数据更新触发update然后触发get, 都会向订阅者列表 dep 里边重复添加该 watcher
+		// 判断是否已经订阅过该主题对象了(依赖数据的代理)
+		// 也可以在 dep.addSub 方法里判断, 主题对象的订阅者列表里是否已经存在了该 watcher
+		if (!this.depIds.hasOwnProperty(dep.id)) {
+			dep.addSub(this);
+			this.depIds[dep.id] = dep;
+		}
 	}
 	// 触发数据属性的getter, 从而将watcher实例添加到dep中, 与observer建立联系
 	get () {
