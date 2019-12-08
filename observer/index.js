@@ -26,7 +26,7 @@ class Observer {
 				if (Dep.target) {
 					// dep.depend();
 					Dep.target.addDep(dep); // 添加watcher到dep
-					// console.log('添加订阅');
+					console.log(dep.id, ' 添加订阅');
 				}
 				return val;
 			},
@@ -45,11 +45,11 @@ class Observer {
 class Dep {
 	constructor () {
 		this.subs = [];
-		// this.id = Dep.uid++;
+		this.id = Dep.uid++;
 	}
 
 	static target = null;
-	// static uid = 0;
+	static uid = 0;
 	
 	// depend () {
 	// 	Dep.target.addDep(this);
@@ -73,9 +73,16 @@ class Dep {
 
 // 订阅者, 订阅vm数据(各个节点都是订阅者)
 class Watcher {
-	constructor (vm, name, cb) {
+	constructor (vm, expOrFn, cb) {
 		this.vm = vm;
-		this.name = name;
+		
+		// expOrFn 参数支持函数(ex.vm.$watch)
+		if (typeof expOrFn === 'function') {
+			// console.log('函数');
+			this.getter = expOrFn;
+		} else {
+			this.getter = parseGetter(expOrFn);
+		}
 		this.cb = cb;
 		// this.depIds = {};
 		this.value = this.get(); // 生成watcher实例时, 触发依赖数据的 getter 从而添加订阅
@@ -93,14 +100,16 @@ class Watcher {
 	// 触发数据属性的getter, 从而将watcher实例添加到dep中, 与observer建立联系
 	get () {
 		Dep.target = this; // 暴露watcher
-		var value = this.vm[this.name]; // 触发属性的getter(Observer类中), 从而添加订阅
+		// var value = this.vm[this.name]; // 触发属性的getter(Observer类中), 从而添加订阅
+		var value = this.getter.call(this.vm, this.vm);
 		Dep.target = null;
 		return value;
 	}
 	update () {
 		// console.log('侦测到'+ this.name +'数据更新(setter)时, 调用相关watcher的update');
 		// var value = this.get(); // 获取到依赖属性的值; 这样会通过 get方法重复添加订阅, 这是我们不希望的
-		var value = this.vm[this.name]; // 直接获取依赖属性的更新值; 这样不会添加订阅
+		// var value = this.vm[this.name]; // 直接获取依赖属性的更新值; 这样不会添加订阅
+		var value = this.getter.call(this.vm, this.vm);
 		var oldValue = this.value;
 		if (value !== oldValue) {
 			this.value = value;
@@ -108,6 +117,25 @@ class Watcher {
 			// 更新视图
 			this.cb.call(this.vm, value, oldValue);
 		}
+	}
+}
+
+/**
+ * 解析简单的路径 ex 'a.b.c' => data.a.b.c
+ * @param {String} exp 
+ */
+function parseGetter (exp) {
+	var reg = /[^\w.$]/; // 不匹配 单词字符(所有的字母、所有的数字和下划线), . 和 $
+	if (reg.test(exp)) return;
+
+	var exps = exp.split('.');
+	return function (obj) {
+		for (var i=0, len=exps.length; i<len; i++) {
+			if (!obj) return;
+			obj = obj[exps[i]];
+		}
+
+		return obj;
 	}
 }
 
