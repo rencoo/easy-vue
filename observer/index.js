@@ -69,11 +69,10 @@ class Dep {
 
 // 订阅者, 订阅vm数据(各个节点都是订阅者)
 class Watcher {
-	constructor (vm, node, name, type) {
+	constructor (vm, name, cb) {
 		this.vm = vm;
-		this.node = node;
 		this.name = name;
-		this.type = type;
+		this.cb = cb;
 		this.update(); // 更新视图
 	}
 	addDep (dep) {
@@ -89,40 +88,13 @@ class Watcher {
 		return value;
 	}
 	update () {
-		// debugger;
-		var _this = this;
 		var value = this.get(); // 获取到依赖属性的值
 		var oldValue = this.value;
 		if (value !== oldValue) {
 			this.value = value;
-			// 更新DOM节点信息
-			// this.cb.call(this.vm, value, oldValue);
-
-			if (this.node.nodeType === 1) { // 元素节点(nodeValue为null)
-				// console.log('更新元素节点');
-
-				if (this.type === 'model') {
-					this.node.value = this.value; // 更新视图
-				} else if (this.type === 'text') {
-					this.node.textContent = this.value;
-				} else if (this.type === 'html') {
-					this.node.innerHTML = this.value;
-				}
-				
-			} 
-			else if (this.node.nodeType === 3) // 文本节点
-            {
-				// console.log('更新文本节点');
-				var reg = /\{\{(.*?)\}\}/g; // 惰性匹配
-				this.node.nodeValue = this.node.nodeValue.replace(reg, function (sMatch, $1) {
-					var name = $1.trim();
-					if (name === _this.name) {
-						return _this.value;
-					} else {
-						return sMatch; // 匹配到了就替换, 未匹配到就保持不变等下一个watcher来匹配
-					}
-				});
-            }
+			
+			// 更新视图
+			this.cb.call(this.vm, value, oldValue);
 		}
 	}
 }

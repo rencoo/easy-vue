@@ -117,22 +117,32 @@ Compile.prototype = {
 Compile.prototype.constructor = Compile;
 
 var compileUtil = {
-    // textNode
-    // {{}}
+    // textNode's Mustache: {{ text }}
     textNode (node, vm, name) {
-        new Watcher(vm, node, name);
+        var updaterFn = updater['textNodeUpdater'];
+        new Watcher(vm, name, function (value, oldValue) {
+            updaterFn && updaterFn(node, name, value, oldValue);
+        });
     },
 
-    // elementNode
+    // elementNode's directive : v-
     // TODO: v-text="'hello'" 与 v-html="'<h2>hello</h2>"
     // v-text
     text (node, vm, name) {
-        new Watcher(vm, node, name, 'text');
+        var dir = 'text';
+        var updaterFn = updater[dir + 'Updater'];
+        new Watcher(vm, name, function (value, oldValue) {
+            updaterFn && updaterFn(node, value, oldValue);
+        });
     },
 
     // v-html
     html (node, vm, name) {
-        new Watcher(vm, node, name, 'html');
+        var dir = 'html';
+        var updaterFn = updater[dir + 'Updater'];
+        new Watcher(vm, name, function (value, oldValue) {
+            updaterFn && updaterFn(node, value, oldValue);
+        });
     },
 
     // v-model
@@ -140,13 +150,12 @@ var compileUtil = {
         node.addEventListener('input', function (e) {
             vm[name] = e.target.value;
         });
-        new Watcher(vm, node, name, 'model');
+        var dir = 'model';
+        var updaterFn = updater[dir + 'Updater'];
+        new Watcher(vm, name, function (value, oldValue) {
+            updaterFn && updaterFn(node, value, oldValue);
+        });
     },
-    // Watcher 的第四个参数用于指示, 具体对节点的什么属性进行操作
-    // 比如
-    // v-model对应的是 node.value(input)
-    // v-text对应的是 node.innerText 或者 node.textContent
-    // v-html对应的是 node.innerHtml
 
     eventHandler (node, vm, dirName, dirExp) {
         // on:click
@@ -158,5 +167,41 @@ var compileUtil = {
         }
     }
 };
+
+var updater = {
+    // updater for textNode's Mustache: {{ value }}hello{{ text }}world{{ value }}
+    textNodeUpdater (node, name, value) {
+        // 保存一份编译前的信息, 用于每次更新找到对应的依赖
+        if (!node._nodeValue) node._nodeValue = node.nodeValue;
+        if (!node._dependData) node._dependData = {};
+        node._dependData[name] = value; // 同步依赖数据的值: value、text... => {value: '...', text: '...'}
+        
+        var reg = /\{\{(.*?)\}\}/g; // 惰性匹配
+        node.nodeValue = node._nodeValue.replace(reg, function (sMatch, $1) {
+            var name = $1.trim();
+            var depends = Object.keys(node._dependData);
+            if (depends.indexOf(name) !== -1) {
+                return node._dependData[name];
+            } else {
+                // 初始编译时, 先编译第一个依赖数据, 再编译第二个依赖数据... 一次仅编译一个数据
+                // 当文本节点依赖的所有数据都初始编译过一遍之后(此时所有的依赖数据都已经收集到node._dependData中), 就不会再走这个分支了
+                return sMatch;
+            }
+        });
+    },
+
+    // updater for elementNode's directive: v-
+    textUpdater (node, value) {
+        node.textContent = typeof value == 'undefined' ? '' : value; // node.nodeValue
+    },
+
+    htmlUpdater (node, value) {
+        node.innerHTML = typeof value == 'undefined' ? '' : value;
+    },
+
+    modelUpdater (node, value) {
+        node.value = typeof value == 'undefined' ? '' : value;
+    }
+}
 
 export { Compile }
