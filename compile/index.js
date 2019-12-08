@@ -121,7 +121,8 @@ var compileUtil = {
     textNode (node, vm, name) {
         var updaterFn = updater['textNodeUpdater'];
 
-        updaterFn && updaterFn(node, name, vm[name]);
+        // updaterFn && updaterFn(node, name, vm[name]);
+        updaterFn && updaterFn(node, name, this._getVMVal(vm, name)); // {{ a.b.c }};
 
         new Watcher(vm, name, function (value, oldValue) {
             updaterFn && updaterFn(node, name, value, oldValue);
@@ -152,8 +153,9 @@ var compileUtil = {
     bind (node, vm, name, dir) {
         var updaterFn = updater[dir + 'Updater'];
 
-        // 初次编译
-        updaterFn && updaterFn(node, vm[name]);
+        // 初次编译(第一次初始化视图)
+        // updaterFn && updaterFn(node, vm[name]);
+        updaterFn && updaterFn(node, this._getVMVal(vm, name)); // v-text="a.b.c";
 
         // 侦测数据变化, 并更新节点
         new Watcher(vm, name, function (value, oldValue) {
@@ -164,11 +166,15 @@ var compileUtil = {
     eventHandler (node, vm, dirName, dirExp) {
         // on:click
         var eventType = dirName.split(':')[1],
-            fn = vm.options.methods && vm.options.methods[dirExp];
+            fn = vm.$options.methods && vm.$options.methods[dirExp];
 
         if (eventType && fn) {
             node.addEventListener(eventType, fn.bind(vm), false);
         }
+    },
+
+    _getVMVal (vm, exp) {
+        return parseGetter(exp).call(vm, vm);
     }
 };
 
@@ -206,6 +212,25 @@ var updater = {
     modelUpdater (node, value) {
         node.value = typeof value == 'undefined' ? '' : value;
     }
+}
+
+/**
+ * 解析简单的路径 ex 'a.b.c' => data.a.b.c
+ * @param {String} exp 
+ */
+function parseGetter (exp) {
+	var reg = /[^\w.$]/; // 不匹配 单词字符(所有的字母、所有的数字和下划线), . 和 $
+	if (reg.test(exp)) return;
+
+	var exps = exp.split('.');
+	return function (obj) {
+		for (var i=0, len=exps.length; i<len; i++) {
+			if (!obj) return;
+			obj = obj[exps[i]];
+		}
+
+		return obj;
+	}
 }
 
 export { Compile }
