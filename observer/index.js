@@ -26,6 +26,7 @@ class Observer {
 				if (Dep.target) {
 					// dep.depend();
 					Dep.target.addDep(dep); // 添加watcher到dep
+					// console.log('添加订阅');
 				}
 				return val;
 			},
@@ -44,11 +45,11 @@ class Observer {
 class Dep {
 	constructor () {
 		this.subs = [];
-		this.id = Dep.uid++;
+		// this.id = Dep.uid++;
 	}
 
 	static target = null;
-	static uid = 0;
+	// static uid = 0;
 	
 	// depend () {
 	// 	Dep.target.addDep(this);
@@ -76,27 +77,30 @@ class Watcher {
 		this.vm = vm;
 		this.name = name;
 		this.cb = cb;
-		this.depIds = {};
-		this.update(); // 更新视图
+		// this.depIds = {};
+		this.value = this.get(); // 生成watcher实例时, 触发依赖数据的 getter 从而添加订阅
 	}
 	addDep (dep) {
 		// 每次数据更新触发update然后触发get, 都会向订阅者列表 dep 里边重复添加该 watcher
-		// 判断是否已经订阅过该主题对象了(依赖数据的代理)
-		// 也可以在 dep.addSub 方法里判断, 主题对象的订阅者列表里是否已经存在了该 watcher
-		if (!this.depIds.hasOwnProperty(dep.id)) {
-			dep.addSub(this);
-			this.depIds[dep.id] = dep;
-		}
+		// 判断是否已经订阅过该依赖了
+		// 也可以在 dep.addSub 方法里判断, 依赖属性的订阅者列表里是否已经存在了该 watcher
+		// if (!this.depIds.hasOwnProperty(dep.id)) {
+		// 	dep.addSub(this);
+		// 	this.depIds[dep.id] = dep;
+		// }
+		dep.addSub(this); // update 里不通过 get 取值, 就不会重复添加了...
 	}
 	// 触发数据属性的getter, 从而将watcher实例添加到dep中, 与observer建立联系
 	get () {
 		Dep.target = this; // 暴露watcher
-		var value = this.vm[this.name]; // 触发属性的getter(Observer类中), 从而添加订阅者
+		var value = this.vm[this.name]; // 触发属性的getter(Observer类中), 从而添加订阅
 		Dep.target = null;
 		return value;
 	}
 	update () {
-		var value = this.get(); // 获取到依赖属性的值
+		// console.log('侦测到'+ this.name +'数据更新(setter)时, 调用相关watcher的update');
+		// var value = this.get(); // 获取到依赖属性的值; 这样会通过 get方法重复添加订阅, 这是我们不希望的
+		var value = this.vm[this.name]; // 直接获取依赖属性的更新值; 这样不会添加订阅
 		var oldValue = this.value;
 		if (value !== oldValue) {
 			this.value = value;
