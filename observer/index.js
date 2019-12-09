@@ -1,23 +1,27 @@
 // 观察vm数据改变
 class Observer {
-	constructor (data, vm) {
-		this.vm = vm;
+	constructor (data) {
 		this.walk(data);
 	}
 	walk (data) {
 		var _this = this;
 		Object.keys(data).forEach(function (key) {
-			_this.convert(key, data[key]);
+			_this.convert(data, key, data[key]);
 		});
 	}
-	convert(key, val) {
+	convert(data, key, val) {
 		// 将构造参数里的 data 选项数据, 代理到 vm 实例对象中
-		Observer.defineReactive(this.vm, key, val);
+		Observer.defineReactive(data, key, val);
 	}
 
 	// 数据响应式原理
 	// 定义响应式数据
 	static defineReactive (obj, key, val) {
+		// data () { obj: { a: { b: { c: 'hello' } } } }
+		// 递归子属性
+		if (typeof val === 'object') {
+			new Observer(val);
+		}
 		var dep = new Dep();
 		Object.defineProperty(obj, key, {
 			enumerable: true,
