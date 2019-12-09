@@ -15,15 +15,22 @@
 	<div>
 		<button v-on:click="clickHandler">button</button>
 	</div>
+	<div v-text="a.b.c"></div>
+	{{a.b.c}}
 </div>
 <script type="module">
 	import { Vue } from '../vue.js';
-	window.vm = new Vue({
+	var vm = new Vue({
 		el: '#app',
 		data: {
 			text: 'hello world',
 			text2: 'good job',
-			html: '<h3>hello world</h3>'
+			html: '<h3>hello world</h3>',
+			a: {
+				b: {
+					c: 'data in deep'
+				}
+			}
 		},
 		methods: {
 			clickHandler () {
@@ -32,4 +39,16 @@
 			}
 		}
 	});
+
+	// vm.$watch('text', function () {
+	// 	alert('text changes');
+	// });
+
+	// vm.$watch(function () {
+	// 	return this.text2;
+	// }, function () {
+	// 	alert('text2 changes');
+	// });
+
+	window.vm = vm;
 </script>
