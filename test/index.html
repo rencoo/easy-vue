@@ -1,54 +1,54 @@
 <!-- 回车也是文本节点 -->
 <div id="app">
-	<input type="text" v-model="text">
-	<div v-text="text"></div>
-	<div v-html="html"></div>
-	<div> 
-		<div>{{ text }}</div>
-		<div>
-			<input type="text" v-model="text">
-			<div v-text="text"></div>
-			<div v-html="html"></div>
-		</div>
-	</div>
-	{{ text }} 文本节点中的非插值表达式 {{ text }} {{ text2 }}
-	<div>
-		<button v-on:click="clickHandler">button</button>
-	</div>
-	<div v-text="a.b.c"></div>
-	{{a.b.c}}
+  <input type="text" v-model="text">
+  <div v-text="text"></div>
+  <div v-html="html"></div>
+  <div>
+    <div>{{ text }}</div>
+    <div>
+      <input type="text" v-model="text">
+      <div v-text="text"></div>
+      <div v-html="html"></div>
+    </div>
+  </div>
+  {{ text }} 文本节点中的非插值表达式 {{ text }} {{ text2 }}
+  <div>
+    <button v-on:click="clickHandler">button</button>
+  </div>
+  <div v-text="a.b.c"></div>
+  {{a.b.c}}
 </div>
 <script type="module">
-	import { Vue } from '../vue.js';
-	var vm = new Vue({
-		el: '#app',
-		data: {
-			text: 'hello world',
-			text2: 'good job',
-			html: '<h3>hello world</h3>',
-			a: {
-				b: {
-					c: 'data in deep'
-				}
-			}
-		},
-		methods: {
-			clickHandler () {
-				alert('click');
-				this.text = 'Ha Ha!';
-			}
-		}
-	});
+  import { Vue } from '../vue.js';
+  var vm = new Vue({
+    el: '#app',
+    data: {
+      text: 'hello world',
+      text2: 'good job',
+      html: '<h3>hello world</h3>',
+      a: {
+        b: {
+          c: 'data in deep'
+        }
+      }
+    },
+    methods: {
+      clickHandler() {
+        alert('click');
+        this.text = 'Ha Ha!';
+      }
+    }
+  });
 
-	// vm.$watch('text', function () {
-	// 	alert('text changes');
-	// });
+  // vm.$watch('text', function () {
+  // 	alert('text changes');
+  // });
 
-	// vm.$watch(function () {
-	// 	return this.text2;
-	// }, function () {
-	// 	alert('text2 changes');
-	// });
+  // vm.$watch(function () {
+  // 	return this.text2;
+  // }, function () {
+  // 	alert('text2 changes');
+  // });
 
-	window.vm = vm;
+  window.vm = vm;
 </script>
