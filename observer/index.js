@@ -12,14 +12,13 @@ class Observer {
   }
 
   convert(data, key, val) {
-    // 将构造参数里的 data 选项数据, 代理到 vm 实例对象中
     Observer.defineReactive(data, key, val);
   }
 
   // 数据响应式原理
   // 定义响应式数据
   static defineReactive(obj, key, val) {
-    // data () { obj: { a: { b: { c: 'hello' } } } }
+    // { obj: { a: { b: { c: 'hello' } } } }
     // 递归子属性
     if (typeof val === 'object') {
       new Observer(val);
@@ -29,7 +28,7 @@ class Observer {
       enumerable: true,
       configurable: false, // 不能再 define
       get() {
-        if (Dep.target) {
+        if (Dep.target) { // Compile 阶段，每当实例化 Watcher 时（Dep.target就是实例化出的watcher），过程中会触发属性的getter，将 watcher 添加到 dep 的 subs 里
           // dep.depend();
           Dep.target.addDep(dep); // 添加watcher到dep
           console.log(dep.id, ' 添加订阅');
@@ -121,7 +120,7 @@ class Watcher {
     // console.log('侦测到'+ this.name +'数据更新(setter)时, 调用相关watcher的update');
     // var value = this.get(); // 获取到依赖属性的值; 这样会通过 get方法重复添加订阅, 这是我们不希望的
     // var value = this.vm[this.name]; // 直接获取依赖属性的更新值; 这样不会添加订阅
-    var value = this.getter.call(this.vm, this.vm);
+    var value = this.getter.call(this.vm, this.vm); // 构造函数传入的data上的属性，已经都代理到vm上了
     var oldValue = this.value;
     if (value !== oldValue) {
       this.value = value;

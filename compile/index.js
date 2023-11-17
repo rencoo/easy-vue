@@ -123,9 +123,9 @@ var compileUtil = {
     var updaterFn = updater['textNodeUpdater'];
 
     // updaterFn && updaterFn(node, name, vm[name]);
-    updaterFn && updaterFn(node, name, this._getVMVal(vm, name)); // {{ a.b.c }};
+    updaterFn && updaterFn(node, name, this._getVMVal(vm, name)); // {{ a.b.c }}; 先执行一次
 
-    new Watcher(vm, name, function (value, oldValue) {
+    new Watcher(vm, name, function (value, oldValue) { // 订阅依赖数据的变更
       updaterFn && updaterFn(node, name, value, oldValue);
     });
   },
